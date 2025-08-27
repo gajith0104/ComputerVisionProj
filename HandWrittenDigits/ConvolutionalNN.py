@@ -7,6 +7,8 @@ import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
 import os
 
+from torchvision.datasets import MNIST
+
 
 class ConvolutionalNN(nn.Module):
 
@@ -84,26 +86,26 @@ class MINSTLoader():
 
         # Verify filepath exists otherwise download data
 
-        if os.path.exists(file):
-            self.file = file
-        else:
-            print("File doesn't exist. Getting files from online")
-            # Add transforms to dataset
-            transform = transforms.Compose([
-                transforms.ToTensor(),
-                transforms.Normalize((0.1307,), (0.3081,))  # standard MNIST norm
-            ])
+        self.file = file
+        trainDataset = None
+        testDataset = None
+        transform = transforms.Compose([
+            transforms.ToTensor(),
+            transforms.Normalize((0.1307,), (0.3081,))
+        ])
+        downloadData = not os.path.exists(self.file+"/MNIST")
 
-            self._trainDataset = torchvision.datasets.MNIST(
-                root='./data', train=True, download=True, transform=transform
-            )
-            self._testDataset = torchvision.datasets.MNIST(
-                root='./data', train=False, download=True, transform=transform
-            )
+        if downloadData:
+            print("downloading MNIST dataset")
+        else:
+            print("running existing MNIST dataset")
+
+        trainDataset = MNIST(root=file, train=True, download=downloadData, transform=transform)
+        testDataset = MNIST(root=file, train=False, download=downloadData, transform=transform)
 
         # Load datasets into memory
-        self._trainDataset = DataLoader(self._trainDataset, batch_size=self.trainSize, shuffle=True)
-        self._testDataset = DataLoader(self._testDataset, batch_size=self.testSize, shuffle=True)
+        self._trainDataset = DataLoader(trainDataset, batch_size=self.trainSize, shuffle=True)
+        self._testDataset = DataLoader(testDataset, batch_size=self.testSize, shuffle=True)
 
     def getTrainDataset(self):
         return self._trainDataset
@@ -163,10 +165,10 @@ def main():
     trainer = ConvolutionalNNTrainer(model, dataset.getTrainDataset(), dataset.getTestDataset())
 
     # Run model and evaluation percentages
-    loss = trainer.train()
-    actualLoss = trainer.test()
-    print("Loss: ", loss)
-    print("Actual Loss: ", actualLoss)
+    trainLoss = trainer.train()
+    testLoss = trainer.test()
+    print("Loss while training: ", trainLoss)
+    print("Loss during testing: ", testLoss)
 
 
 if __name__ == "__main__":
